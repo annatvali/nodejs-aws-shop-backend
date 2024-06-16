@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "title": "ProductOne",
+    "description": "Short ProductOne Description",
+    "price": 24
+  },
+  {
+    "id": "2",
+    "title": "ProductTwo",
+    "description": "Short ProductTwo Description",
+    "price": 11
+  },
+  {
+    "id": "3",
+    "title": "ProductThree",
+    "description": "Short ProductThree Description",
+    "price": 23
+  },
+  {
+    "id": "4",
+    "title": "ProductFour",
+    "description": "Short ProductFour Description",
+    "price": 15
+  },
+  {
+    "id": "5",
+    "title": "ProductFive",
+    "description": "Short ProductFive Description",
+    "price": 28
+  },
+  {
+    "id": "6",
+    "title": "ProductSix",
+    "description": "Short ProductSix Description",
+    "price": 17
+  }
+]
