@@ -3,26 +3,39 @@ import {
   APIGatewayProxyResult,
   APIGatewayProxyHandler,
 } from 'aws-lambda';
-import { Product } from '../interfaces/Product';
 import { headers, generateErrorResponse } from './common';
-import * as fs from 'fs';
-import * as path from 'path';
+import dynamoDbClient from '../db/config';
+import { ScanCommand } from '@aws-sdk/client-dynamodb';
 
 export const handler: APIGatewayProxyHandler = async (
   _event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
-    const dataPath = path.resolve(__dirname, 'data.json');
-    const products: Product[] = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+    const productsTable = process.env.PRODUCTS_TABLE!;
+    const stocksTable = process.env.STOCKS_TABLE!;
 
-    if (!products || products.length === 0) {
-      return generateErrorResponse(404, 'Error 404 - Products not found!');
-    }
+    const productsResult = await dynamoDbClient.send(
+      new ScanCommand({ TableName: productsTable })
+    );
+    const stocksResult = await dynamoDbClient.send(
+      new ScanCommand({ TableName: stocksTable })
+    );
+
+    const products = productsResult.Items ?? [];
+    const stocks = stocksResult.Items ?? [];
+
+    const productsWithStock = products.map((product) => {
+      const stock = stocks.find((s) => s.product_id === product.id);
+      return {
+        ...product,
+        count: stock ? stock.count : 0,
+      };
+    });
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(products),
+      body: JSON.stringify(productsWithStock),
     };
   } catch (error) {
     console.error('Error handling request:', error);

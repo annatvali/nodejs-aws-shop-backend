@@ -3,10 +3,10 @@ import {
   APIGatewayProxyResult,
   APIGatewayProxyHandler,
 } from 'aws-lambda';
-import { Product } from '../interfaces/Product';
 import { headers, generateErrorResponse } from './common';
-import * as fs from 'fs';
-import * as path from 'path';
+import dynamoDbClient from '../db/config';
+import { GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { marshall } from '@aws-sdk/util-dynamodb';
 
 export const handler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent
@@ -18,19 +18,41 @@ export const handler: APIGatewayProxyHandler = async (
       return generateErrorResponse(400, 'Error 400 - Missing product ID!');
     }
 
-    const dataPath = path.resolve(__dirname, 'data.json');
-    const products: Product[] = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+    const productsTable = process.env.PRODUCTS_TABLE!;
+    const stocksTable = process.env.STOCKS_TABLE!;
 
-    const product = products.find((product: Product) => product.id === id);
+    const getProductParams = {
+      TableName: productsTable,
+      Key: marshall({ id }), // Marshall the Key object
+    };
+    const getStockParams = {
+      TableName: stocksTable,
+      Key: marshall({ product_id: id }), // Marshall the Key object
+    };
+
+    const productResult = await dynamoDbClient.send(
+      new GetItemCommand(getProductParams)
+    );
+    const product = productResult.Item ? productResult.Item : undefined;
 
     if (!product) {
       return generateErrorResponse(404, 'Error 404 - Product not found!');
     }
 
+    const stockResult = await dynamoDbClient.send(
+      new GetItemCommand(getStockParams)
+    );
+    const stock = stockResult.Item ? stockResult.Item : undefined;
+
+    const productWithStock = {
+      ...product,
+      count: stock ? stock.count.N : 0, // Access the count attribute from DynamoDB response
+    };
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(product),
+      body: JSON.stringify(productWithStock),
     };
   } catch (error) {
     console.error('Error handling request:', error);

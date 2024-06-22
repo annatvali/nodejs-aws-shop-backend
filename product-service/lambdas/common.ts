@@ -2,7 +2,7 @@ import { APIGatewayProxyResult } from 'aws-lambda';
 
 export const headers = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
 };
