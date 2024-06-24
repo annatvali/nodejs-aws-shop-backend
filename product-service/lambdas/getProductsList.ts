@@ -4,8 +4,10 @@ import {
   APIGatewayProxyHandler,
 } from 'aws-lambda';
 import { headers, generateErrorResponse } from './common';
-import dynamoDbClient from '../db/config';
-import { ScanCommand } from '@aws-sdk/client-dynamodb';
+// import dynamoDbClient from '../db/config';
+import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
+
+const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 export const handler: APIGatewayProxyHandler = async (
   _event: APIGatewayProxyEvent

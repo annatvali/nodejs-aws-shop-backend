@@ -1,11 +1,11 @@
-import { PutItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
-import dynamoDbClient from './config';
 import { products, stocks } from './mockData';
 import { Product, Stock } from '../types/models';
 import dotenv from 'dotenv';
 
 dotenv.config();
+const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 
 const insertProduct = async (product: Product) => {
   const params = {

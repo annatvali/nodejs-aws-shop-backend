@@ -8,18 +8,16 @@ export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const productsTable = new dynamodb.Table(this, 'ProductsTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      tableName: 'products',
-    });
-
-    const stocksTable = new dynamodb.Table(this, 'StocksTable', {
-      partitionKey: {
-        name: 'product_id',
-        type: dynamodb.AttributeType.STRING,
-      },
-      tableName: 'stocks',
-    });
+    const productsTable = dynamodb.Table.fromTableName(
+      this,
+      'ProductsDynamoTable',
+      'products'
+    );
+    const stocksTable = dynamodb.Table.fromTableName(
+      this,
+      'StocksDynamoTable',
+      'stocks'
+    );
 
     const getProductsListFunction = new lambda.Function(
       this,
@@ -49,11 +47,45 @@ export class ProductServiceStack extends cdk.Stack {
       }
     );
 
-    productsTable.grantReadData(getProductsListFunction);
-    stocksTable.grantReadData(getProductsListFunction);
+    const createProductFunction = new lambda.Function(
+      this,
+      'CreateProductHandler',
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        code: lambda.Code.fromAsset('lambdas'),
+        handler: 'createProduct.handler',
+        environment: {
+          PRODUCTS_TABLE: productsTable.tableName,
+          STOCKS_TABLE: stocksTable.tableName,
+        },
+      }
+    );
 
-    productsTable.grantReadData(getProductByIdFunction);
-    stocksTable.grantReadData(getProductByIdFunction);
+    const updateProductFunction = new lambda.Function(
+      this,
+      'UpdateProductHandler',
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        code: lambda.Code.fromAsset('lambdas'),
+        handler: 'updateProduct.handler',
+        environment: {
+          PRODUCTS_TABLE: productsTable.tableName,
+          STOCKS_TABLE: stocksTable.tableName,
+        },
+      }
+    );
+
+    productsTable.grantReadWriteData(getProductsListFunction);
+    stocksTable.grantReadWriteData(getProductsListFunction);
+
+    productsTable.grantReadWriteData(getProductByIdFunction);
+    stocksTable.grantReadWriteData(getProductByIdFunction);
+
+    productsTable.grantReadWriteData(createProductFunction);
+    stocksTable.grantReadWriteData(createProductFunction);
+
+    productsTable.grantReadWriteData(updateProductFunction);
+    stocksTable.grantReadWriteData(updateProductFunction);
 
     const api = new apigateway.RestApi(this, 'ProductsApi', {
       restApiName: 'Products Service',
@@ -70,10 +102,20 @@ export class ProductServiceStack extends cdk.Stack {
       new apigateway.LambdaIntegration(getProductsListFunction)
     );
 
+    allProductsResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(createProductFunction)
+    );
+
     const singleProductResource = allProductsResource.addResource('{id}');
     singleProductResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getProductByIdFunction)
+    );
+
+    singleProductResource.addMethod(
+      'PUT',
+      new apigateway.LambdaIntegration(updateProductFunction)
     );
   }
 }
