@@ -1,3 +1,4 @@
+import * as AWS from 'aws-sdk';
 export interface Product {
   id: string;
   title: string;
@@ -11,37 +12,18 @@ export interface Stock {
   count: number;
 }
 
-// export interface DynamoDBProduct {
-//   id: { S: string };
-//   title: { S: string };
-//   description: { S: string };
-//   price: { N: string };
-//   count?: { N: string };
-// }
-
-// export interface DynamoDBStock {
-//   product_id: { S: string };
-//   count: { N: string };
-// }
-
-
-// export function convertDynamoDBProductToProduct(
-//   dynamoDBProduct: DynamoDBProduct
-// ): Product {
-//   return {
-//     id: dynamoDBProduct.id.S,
-//     title: dynamoDBProduct.title.S,
-//     description: dynamoDBProduct.description.S,
-//     price: parseFloat(dynamoDBProduct.price.N),
-//   };
-// }
-
-// export function convertDynamoDBStockToStock(dynamoDBStock: DynamoDBStock): {
-//   productId: string;
-//   count: number;
-// } {
-//   return {
-//     productId: dynamoDBStock.product_id.S,
-//     count: parseInt(dynamoDBStock.count.N, 10),
-//   };
-// }
+// export const convertDynamoDBItem = <T>(item: AWS.DynamoDB.DocumentClient.AttributeMap): T => {
+//   return Object.keys(item).reduce((acc: any, key) => {
+//     const value = item[key];
+//     if (typeof value === 'object' && value !== null) {
+//       if ('S' in value) {
+//         acc[key] = value.S;
+//       } else if ('N' in value) {
+//         acc[key] = Number(value.N);
+//       }
+//     } else {
+//       acc[key] = value;
+//     }
+//     return acc;
+//   }, {}) as T;
+// };

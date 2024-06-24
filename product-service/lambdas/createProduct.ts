@@ -1,13 +1,11 @@
+import { Product, Stock } from '../types/models';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
-// import dynamoDbClient from '../db/config';
 import { v4 as uuidv4 } from 'uuid';
 import { headers, generateErrorResponse } from './common';
-import { Product, Stock } from '../types/models';
 
 const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
-
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -21,7 +19,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const product: Product = { id, title, description, price };
     const stock: Stock = { product_id: id, count };
 
-    // Serialize data for DynamoDB client
     const productParams = {
       TableName: process.env.PRODUCTS_TABLE as string,
       Item: marshall(product),
@@ -31,7 +28,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       Item: marshall(stock),
     };
 
-    // Use DynamoDB client to execute PutItemCommand
     await dynamoDbClient.send(new PutItemCommand(productParams));
     await dynamoDbClient.send(new PutItemCommand(stockParams));
 
