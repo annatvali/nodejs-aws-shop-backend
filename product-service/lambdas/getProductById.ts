@@ -5,7 +5,7 @@ import {
   APIGatewayProxyHandler,
 } from 'aws-lambda';
 import { headers } from './common';
-import { processErrors } from './apiErrorResponses';
+import { processError } from './apiErrorResponses';
 import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
 import { marshall } from '@aws-sdk/util-dynamodb';
 
@@ -36,7 +36,7 @@ export const handler: APIGatewayProxyHandler = async (
     const id = event.pathParameters?.id;
 
     if (!id) {
-      return processErrors('ErrorKeyInvalidRequest');
+      return processError('ErrorKeyInvalidRequest');
     }
 
     const productsTable = process.env.PRODUCTS_TABLE!;
@@ -60,7 +60,7 @@ export const handler: APIGatewayProxyHandler = async (
       : undefined;
 
     if (!product) {
-      return processErrors('ErrorKeyResourceNotFound');
+      return processError('ErrorKeyResourceNotFound');
     }
 
     const stockResult = await dynamoDbClient.send(
@@ -83,6 +83,6 @@ export const handler: APIGatewayProxyHandler = async (
     };
   } catch (error) {
     console.error('Error handling request:', error);
-    return processErrors('ErrorKeyServerError');
+    return processError('ErrorKeyServerError');
   }
 };
