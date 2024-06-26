@@ -1,43 +1,70 @@
-import { Product, Stock } from '../types/models';
-import { APIGatewayProxyHandler } from 'aws-lambda';
-import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
-import { marshall } from '@aws-sdk/util-dynamodb';
+import { headers } from './common';
+import {
+  DynamoDBDocumentClient,
+  TransactWriteCommand,
+} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
-import { headers, generateErrorResponse } from './common';
+import { processError } from './apiErrorResponses';
+import { ProductRequestData } from '../types/models';
 
-const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+const dynamodbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
+const dynamodb = DynamoDBDocumentClient.from(dynamodbClient);
 
-export const handler: APIGatewayProxyHandler = async (event) => {
+const PRODUCT_TABLE = process.env.PRODUCT_TABLE;
+const STOCK_TABLE = process.env.STOCK_TABLE;
+
+async function validateRequest(body: any): Promise<ProductRequestData> {
+  const { title, description, price, count = 0 } = body;
+  if (!title || !description || !price) {
+    throw new Error('ErrorKeyInvalidRequest');
+  }
+  return { title, description, price, count };
+}
+
+async function createProductInDatabase(product: ProductRequestData) {
+  const id: string = uuidv4();
+  const productParams = {
+    TableName: PRODUCT_TABLE,
+    Item: { id, ...product },
+  };
+
+  const stockParams = {
+    TableName: STOCK_TABLE,
+    Item: { product_id: id, count: product.count },
+  };
+
+  const transactionParams = {
+    TransactItems: [{ Put: productParams }, { Put: stockParams }],
+  };
+
+  await dynamodb.send(new TransactWriteCommand(transactionParams));
+  return id;
+}
+
+export const handler = async (
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> => {
+  console.log('Initiating request processing:', event);
+
   try {
-    const { title, description, price, count } = JSON.parse(event.body || '{}');
+    const body: ProductRequestData = JSON.parse(event.body || '{}');
+    const validatedProduct = await validateRequest(body);
+    console.log('Validation passed, proceeding with product creation!');
 
-    if (!title || !price || count === undefined) {
-      return generateErrorResponse(400, 'Error 400 - Invalid product data!');
-    }
-
-    const id = uuidv4();
-    const product: Product = { id, title, description, price };
-    const stock: Stock = { product_id: id, count };
-
-    const productParams = {
-      TableName: process.env.PRODUCTS_TABLE as string,
-      Item: marshall(product),
-    };
-    const stockParams = {
-      TableName: process.env.STOCKS_TABLE as string,
-      Item: marshall(stock),
-    };
-
-    await dynamoDbClient.send(new PutItemCommand(productParams));
-    await dynamoDbClient.send(new PutItemCommand(stockParams));
+    const productId = await createProductInDatabase(validatedProduct);
 
     return {
-      statusCode: 201,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ ...product, count }),
+      body: JSON.stringify({
+        message: 'Product successfully added to the catalog',
+        productId,
+      }),
     };
-  } catch (error) {
-    console.error('Error handling request:', error);
-    return generateErrorResponse(500, 'Error 500 - Internal server error!');
+  } catch (e: any) {
+    console.error('Failed to create product due to an error:', e.message);
+    return processError(e.message);
   }
 };

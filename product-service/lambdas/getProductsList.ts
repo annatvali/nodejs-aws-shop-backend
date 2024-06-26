@@ -4,7 +4,8 @@ import {
   APIGatewayProxyResult,
   APIGatewayProxyHandler,
 } from 'aws-lambda';
-import { headers, generateErrorResponse } from './common';
+import { headers } from './common';
+import { processError } from './apiErrorResponses';
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 
 const dynamoDbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -41,8 +42,6 @@ export const handler: APIGatewayProxyHandler = async (
       new ScanCommand({ TableName: stocksTable })
     );
 
-    // const products = productsResult.Items ?? [];
-    // const stocks = stocksResult.Items ?? [];
     const products =
       productsResult.Items?.map((item) => convertDynamoDBItem<Product>(item)) ??
       [];
@@ -64,6 +63,6 @@ export const handler: APIGatewayProxyHandler = async (
     };
   } catch (error) {
     console.error('Error handling request:', error);
-    return generateErrorResponse(500, 'Error 500 - Internal server error!');
+    return processError('ErrorKeyServerFault');
   }
 };
