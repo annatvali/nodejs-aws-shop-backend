@@ -12,6 +12,8 @@ export interface Stock {
   count: number;
 }
 
+export interface ProductRequestData extends Omit<Product, 'id'> {}
+
 // export const convertDynamoDBItem = <T>(item: AWS.DynamoDB.DocumentClient.AttributeMap): T => {
 //   return Object.keys(item).reduce((acc: any, key) => {
 //     const value = item[key];
