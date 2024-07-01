@@ -5,8 +5,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export class ImportServiceStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+  constructor(scope: Construct, id: string, s3ImportBucket: string) {
+    super(scope, id, {});
 
     const importProductsFileLambda = new lambda.Function(
       this,
@@ -14,10 +14,9 @@ export class ImportServiceStack extends cdk.Stack {
       {
         runtime: lambda.Runtime.NODEJS_20_X,
         handler: 'importProductsFile.handler',
-        code: lambda.Code.fromAsset('path/to/your/lambda/code'),
+        code: lambda.Code.fromAsset('lambdas'),
         environment: {
-          S3_BUCKET_NAME: 'your-s3-bucket-name',
-          AWS_REGION: 'your-aws-region',
+          S3_IMPORT_BUCKET: s3ImportBucket,
         },
       }
     );
@@ -25,7 +24,7 @@ export class ImportServiceStack extends cdk.Stack {
     importProductsFileLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['s3:GetObject'],
-        resources: [`arn:aws:s3:::your-s3-bucket-name/uploaded/*`],
+        resources: [`arn:aws:s3:::${s3ImportBucket}/uploaded/*`],
       })
     );
 

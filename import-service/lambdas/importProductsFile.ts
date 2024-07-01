@@ -2,8 +2,8 @@ import { APIGatewayProxyHandler } from 'aws-lambda';
 import { S3, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const s3Client = new S3({ region: process.env.AWS_REGION });
-const bucketName = process.env.S3_BUCKET_NAME;
+const s3Client = new S3({ region: process.env.AWS_REGION || 'us-east-1' });
+const bucketName = process.env.S3_IMPORT_BUCKET as string;
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const fileName = event.queryStringParameters?.name;
