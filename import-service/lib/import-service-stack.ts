@@ -3,6 +3,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_s3_notifications as s3Notifications } from 'aws-cdk-lib';
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, s3ImportBucket: string) {
@@ -18,6 +20,36 @@ export class ImportServiceStack extends cdk.Stack {
         environment: {
           S3_IMPORT_BUCKET: s3ImportBucket,
         },
+      }
+    );
+
+    const importFileProcessorLambda = new lambda.Function(
+      this,
+      'ImportFileProcessor',
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        handler: 'importFileProcessor.handler',
+        code: lambda.Code.fromAsset('lambdas'),
+      }
+    );
+
+    importFileProcessorLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        resources: [`arn:aws:s3:::${s3ImportBucket}/uploaded/*`],
+      })
+    );
+
+    const bucket = s3.Bucket.fromBucketName(
+      this,
+      'ImportBucket',
+      s3ImportBucket
+    );
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.LambdaDestination(importFileProcessorLambda),
+      {
+        prefix: 'uploaded/',
       }
     );
 
