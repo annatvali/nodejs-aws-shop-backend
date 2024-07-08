@@ -1,4 +1,4 @@
-import { handler } from '../lambdas/importFileProcessor';
+import { handler } from '../lambdas/importFileParser';
 import { S3Event } from 'aws-lambda';
 import { GetObjectCommand, S3 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
