@@ -5,10 +5,17 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { aws_s3 as s3 } from 'aws-cdk-lib';
 import { aws_s3_notifications as s3Notifications } from 'aws-cdk-lib';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
 
 export class ImportServiceStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, s3ImportBucket: string) {
+  constructor(scope: Construct, id: string) {
     super(scope, id, {});
+
+    const s3ImportBucket =
+      process.env.S3_IMPORT_BUCKET || 'import-service-stack-bucket';
 
     const importProductsFileLambda = new lambda.Function(
       this,
@@ -45,6 +52,7 @@ export class ImportServiceStack extends cdk.Stack {
       'ImportBucket',
       s3ImportBucket
     );
+
     bucket.addEventNotification(
       s3.EventType.OBJECT_CREATED,
       new s3Notifications.LambdaDestination(importFileProcessorLambda),
@@ -76,7 +84,10 @@ export class ImportServiceStack extends cdk.Stack {
     );
 
     new cdk.CfnOutput(this, 'ImportApiUrl', {
-      value: api.url,
+      value:
+        api.url ||
+        process.env.API_GATEWAY_URL ||
+        'https://cmn9rzw83j.execute-api.eu-central-1.amazonaws.com/prod',
     });
   }
 }
