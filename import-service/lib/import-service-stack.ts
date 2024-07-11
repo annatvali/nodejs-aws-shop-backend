@@ -25,7 +25,7 @@ export class ImportServiceStack extends cdk.Stack {
         handler: 'importProductsFile.handler',
         code: lambda.Code.fromAsset('lambdas'),
         environment: {
-          S3_IMPORT_BUCKET: s3ImportBucket,
+          S3_IMPORT_BUCKET: 'import-service-stack-bucket',
         },
       }
     );

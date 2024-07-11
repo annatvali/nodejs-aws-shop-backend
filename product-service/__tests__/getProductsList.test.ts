@@ -4,7 +4,7 @@ import {
   Context,
 } from 'aws-lambda';
 import { handler } from '../lambdas/getProductsList';
-import * as data from '../lambdas/data.json';
+import * as data from '../db/mockData'
 import * as fs from 'fs';
 
 jest.mock('fs');

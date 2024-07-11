@@ -5,13 +5,21 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 import { handler } from '../lambdas/getProductById';
-import { Product } from '../interfaces/Product';
+import { Product } from '../types/models';
 import { generateErrorResponse, headers } from '../lambdas/common';
 import * as fs from 'fs';
 import * as path from 'path';
 
 jest.mock('fs');
 jest.mock('path');
+jest.mock('@aws-sdk/client-dynamodb', () => {
+  return {
+    DynamoDBClient: jest.fn(() => ({
+      send: jest.fn(),
+    })),
+    GetItemCommand: jest.fn(),
+  };
+});
 
 describe('getProductById Lambda Function', () => {
   const mockProducts: Product[] = [

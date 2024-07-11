@@ -7,14 +7,17 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns';
 
-type CSVProduct = {
+export type CSVProduct = {
   title: string;
   description: string;
   price: number;
   count: number;
 };
 
-class ProductService {
+export class ProductService {
+  static mockClear() {
+    throw new Error('Method not implemented.');
+  }
   private dbClient: DynamoDBDocumentClient;
   private snsClient: SNSClient;
 
@@ -64,7 +67,7 @@ class ProductService {
     description: string,
     count: number
   ): Promise<void> {
-const message = `New product added: "${title}" with a price of $${price}, description: "${description}", and a stock count of ${count}.`;
+    const message = `New product added: "${title}" with a price of $${price}, description: "${description}", and a stock count of ${count}.`;
     const publishCommand = new PublishCommand({
       TopicArn: process.env.SNS_ARN,
       Message: message,

@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -10,6 +11,7 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
+
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -35,23 +37,31 @@ export class ProductServiceStack extends cdk.Stack {
       stocksTableName
     );
 
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
+      topicName: 'createProductTopic',
+    });
+
+    createProductTopic.addSubscription(
+      new subs.EmailSubscription('anntvaliashvili@gmail.com')
+    );
+
     const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue', {
        queueName: 'catalogItemsQueue',
     });
 
-    const catalogBatchProcessFunction = new lambda.Function(
+    const catalogBatchProcessFunction = createLambdaFunction(
       this,
       'catalogBatchProcessFunction',
+      'lambdas',
+      'catalogBatchProcess.handler',
       {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('lambda'),
-        handler: 'catalogBatchProcess.handler',
-        environment: {
-          SQS_URL: catalogItemsQueue.queueUrl,
-          PRODUCTS_TABLE_NAME: productsTable.tableName,
-        },
+        sqsUrl: catalogItemsQueue.queueUrl,
+        productsTableName,
+        CREATE_PRODUCT_TOPIC_ARN: createProductTopic.topicArn,
       }
     );
+
+    createProductTopic.grantPublish(catalogBatchProcessFunction);
 
     catalogBatchProcessFunction.addEventSource(
       new SqsEventSource(catalogItemsQueue, {
@@ -59,59 +69,47 @@ export class ProductServiceStack extends cdk.Stack {
       })
     );
 
-    const getProductsListFunction = new lambda.Function(
+    const getProductsListFunction = createLambdaFunction(
       this,
       'GetProductsListHandler',
+      'lambdas',
+      'getProductsList.handler',
       {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('lambdas'),
-        handler: 'getProductsList.handler',
-        environment: {
-          PRODUCTS_TABLE: productsTable.tableName,
-          STOCKS_TABLE: stocksTable.tableName,
-        },
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
       }
     );
 
-    const getProductByIdFunction = new lambda.Function(
+    const getProductByIdFunction = createLambdaFunction(
       this,
       'GetProductByIdHandler',
+      'lambdas',
+      'getProductById.handler',
       {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('lambdas'),
-        handler: 'getProductById.handler',
-        environment: {
-          PRODUCTS_TABLE: productsTable.tableName,
-          STOCKS_TABLE: stocksTable.tableName,
-        },
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
       }
     );
 
-    const createProductFunction = new lambda.Function(
+    const createProductFunction = createLambdaFunction(
       this,
       'CreateProductHandler',
+      'lambdas',
+      'createProduct.handler',
       {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('lambdas'),
-        handler: 'createProduct.handler',
-        environment: {
-          PRODUCTS_TABLE: productsTable.tableName,
-          STOCKS_TABLE: stocksTable.tableName,
-        },
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
       }
     );
 
-    const updateProductFunction = new lambda.Function(
+    const updateProductFunction = createLambdaFunction(
       this,
       'UpdateProductHandler',
+      'lambdas',
+      'updateProduct.handler',
       {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('lambdas'),
-        handler: 'updateProduct.handler',
-        environment: {
-          PRODUCTS_TABLE: productsTable.tableName,
-          STOCKS_TABLE: stocksTable.tableName,
-        },
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
       }
     );
 
@@ -139,6 +137,7 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
+
     const allProductsResource = api.root.addResource('products');
     allProductsResource.addMethod(
       'GET',
@@ -162,3 +161,20 @@ export class ProductServiceStack extends cdk.Stack {
     );
   }
 }
+
+function createLambdaFunction(
+  scope: Construct,
+  id: string,
+  assetPath: string,
+  handler: string,
+  environment: { [key: string]: string }
+): lambda.Function {
+  return new lambda.Function(scope, id, {
+    runtime: lambda.Runtime.NODEJS_20_X,
+    code: lambda.Code.fromAsset(assetPath),
+    handler,
+    environment,
+  });
+}
+
+export default ProductServiceStack;
