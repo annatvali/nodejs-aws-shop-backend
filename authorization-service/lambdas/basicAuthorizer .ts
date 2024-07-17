@@ -9,15 +9,31 @@ dotenv.config();
 const UserName = process.env.USER_NAME;
 const Password = process.env.PASSWORD;
 
-const decodeToken = (token: string): { username: string; password: string } | null => {
+enum Effect {
+  Allow = 'Allow',
+  Deny = 'Deny',
+}
+
+interface Credentials {
+  username: string;
+  password: string;
+}
+
+const decodeToken = (token: string): Credentials | null => {
   if (!token.startsWith('Basic ')) return null;
   const base64Credentials = token.slice(6);
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+  const credentials = Buffer.from(base64Credentials, 'base64').toString(
+    'utf-8'
+  );
   const [username, password] = credentials.split(':');
   return { username, password };
 };
 
-const generatePolicy = (principalId: string, effect: 'Allow' | 'Deny', statusCode: number): APIGatewayAuthorizerResult => {
+const generatePolicy = (
+  principalId: string,
+  effect: Effect,
+  statusCode: number
+): APIGatewayAuthorizerResult => {
   return {
     principalId,
     policyDocument: {
@@ -39,13 +55,12 @@ const generatePolicy = (principalId: string, effect: 'Allow' | 'Deny', statusCod
 export const handler = async (
   event: APIGatewayTokenAuthorizerEvent
 ): Promise<APIGatewayAuthorizerResult> => {
-
   console.log('Event', JSON.stringify(event));
 
   const token = event.authorizationToken;
 
   if (!token || !token.startsWith('Basic ')) {
-    return generatePolicy('unauthorized', 'Deny', 401);
+    return generatePolicy('unauthorized', Effect.Deny, 401);
   }
 
   const credentials = decodeToken(token);
@@ -55,8 +70,8 @@ export const handler = async (
     credentials.username !== UserName ||
     credentials.password !== Password
   ) {
-    return generatePolicy('unauthorized', 'Deny', 403);
+    return generatePolicy('unauthorized', Effect.Deny, 403);
   }
 
-  return generatePolicy(credentials.username, 'Allow', 200);
+  return generatePolicy(credentials.username, Effect.Allow, 200);
 };
