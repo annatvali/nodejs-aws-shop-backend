@@ -1,0 +1,67 @@
+openapi: 3.0.3
+info:
+  title: Product Service API
+  description: API for managing products
+  version: 1.0.0
+servers:
+  - url: https://p62pvbxud2.execute-api.eu-central-1.amazonaws.com/prod
+tags:
+  - name: Products
+    description: Operations related to products
+paths:
+  /products:
+    get:
+      summary: Get list of products
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '404':
+          description: products not found!
+        '500':
+          description: Internal server error!
+  /products/{id}:
+    get:
+      summary: Get a single product by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID of the product to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found!
+        '400':
+          description: Missing product ID!
+        '500':
+          description: Internal server error!
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1"
+        title:
+          type: string
+          example: "ProductOne"
+        description:
+          type: string
+          example: "Short ProductOne Description"
+        price:
+          type: number
+          example: 24
